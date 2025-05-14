@@ -25,6 +25,12 @@ func (u *User)CreateUser() *User{
 	return u
 }
 
+func GetUserById(userId bson.ObjectId) (*User,error){
+	var user User 
+	err := db.FindId(userId).One(&user)
+	return &user,err
+}
+
 func DeleteUser(userId bson.ObjectId) error{
 	err := db.Remove(userId)
 	return err
