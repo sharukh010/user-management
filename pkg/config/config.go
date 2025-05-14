@@ -8,7 +8,7 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
-func getSession() *mgo.Session {
+func GetSession() *mgo.Session {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error occured while loading env")
