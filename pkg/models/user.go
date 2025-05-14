@@ -1,37 +1,54 @@
 package models
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"github.com/sharukh010/user-managment/pkg/config"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-var db *mgo.Collection
+var userCollection *mongo.Collection
 
 type User struct {
-	Id bson.ObjectId `json:"id" bson:"_id"`
-	Name string `json:"name" bson:"name"`
-	Gender string `json:"gender" bson:"gender"`
-	Age int `json:"age" bson:"age"`
+	ID     primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Name   string             `json:"name" bson:"name"`
+	Gender string             `json:"gender" bson:"gender"`
+	Age    int                `json:"age" bson:"age"`
 }
-func init(){
-	session := config.GetSession()
-	db = session.DB("mongo-golang").C("users")
 
+func init() {
+	client := config.GetSession()
+	userCollection = client.Database("mongo-golang").Collection("users")
+	fmt.Println("✅ Successfully connected to database and initialized collection")
 }
-func (u *User)CreateUser() error{
-	u.Id = bson.NewObjectId()
-	err := db.Insert(u)
+
+func (u *User) CreateUser() error {
+	u.ID = primitive.NewObjectID()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := userCollection.InsertOne(ctx, u)
 	return err
 }
 
-func GetUserById(userId bson.ObjectId) (*User,error){
-	var user User 
-	err := db.FindId(userId).One(&user)
-	return &user,err
+func GetUserById(userId primitive.ObjectID) (*User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var user User
+	err := userCollection.FindOne(ctx, bson.M{"_id": userId}).Decode(&user)
+	return &user, err
 }
 
-func DeleteUser(userId bson.ObjectId) error{
-	err := db.Remove(userId)
+func DeleteUser(userId primitive.ObjectID) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := userCollection.DeleteOne(ctx, bson.M{"_id": userId})
 	return err
 }

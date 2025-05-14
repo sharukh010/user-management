@@ -1,22 +1,42 @@
 package config
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
-	"gopkg.in/mgo.v2"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func GetSession() *mgo.Session {
+func GetSession() *mongo.Client {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error occured while loading env")
+		log.Fatal("Error occurred while loading env")
 	}
+
 	connString := os.Getenv("MONGODB_URL")
-	s,err := mgo.Dial(connString)
+	fmt.Println("Connecting to MongoDB at:", connString)
+
+	clientOpts := options.Client().ApplyURI(connString)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(clientOpts)
+
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
-	return s
+
+	// Ping the database
+	if err := client.Ping(ctx, nil); err != nil {
+		log.Fatalf("MongoDB ping failed: %v", err)
+	}
+
+	fmt.Println("✅ MongoDB session created successfully")
+	return client
 }

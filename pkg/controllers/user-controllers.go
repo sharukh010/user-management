@@ -7,87 +7,80 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sharukh010/user-managment/pkg/models"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func GetUser(w http.ResponseWriter,r *http.Request){
+func GetUser(w http.ResponseWriter, r *http.Request) {
 	userId := mux.Vars(r)["userId"]
 
-	if !bson.IsObjectIdHex(userId){
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	oid := bson.ObjectIdHex(userId)
-	user,err := models.GetUserById(oid)
+	oid, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
 
-	userJSON,err := json.Marshal(user)
-
+	user, err := models.GetUserById(oid)
 	if err != nil {
-		fmt.Printf("error : %v\n",err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
-	w.Header().Set("Content-Type","Application/json")
+	userJSON, err := json.Marshal(user)
+	if err != nil {
+		http.Error(w, "Failed to serialize user", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(userJSON)
 }
 
-func CreateUser(w http.ResponseWriter,r *http.Request){
-	user := models.User{}
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+	var user models.User
 
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		fmt.Println("Failed to decode JSON:", err.Error())
-        http.Error(w, "Invalid request payload", http.StatusBadRequest)
-        return
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
 	}
 
 	if user.Name == "" || user.Gender == "" {
-		fmt.Println("Age : ",user.Age)
-        http.Error(w, "Missing required fields", http.StatusBadRequest)
-        return
-    }
+		http.Error(w, "Missing required fields", http.StatusBadRequest)
+		return
+	}
 
 	err := user.CreateUser()
-	
 	if err != nil {
-		fmt.Println("Error occured :",err.Error())
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Failed to create user", http.StatusBadRequest)
 		return
 	}
-	userJSON,err := json.Marshal(user)
+
+	userJSON, err := json.Marshal(user)
 	if err != nil {
-		fmt.Printf("error : %v\n",err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Failed to serialize user", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type","Application/json")
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(userJSON)
-
 }
 
-func DeleteUser(w http.ResponseWriter,r *http.Request){
-	var userId string = mux.Vars(r)["userId"]
+func DeleteUser(w http.ResponseWriter, r *http.Request) {
+	userId := mux.Vars(r)["userId"]
 
-	if !bson.IsObjectIdHex(userId) {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	oid := bson.ObjectIdHex(userId)
-
-	err := models.DeleteUser(oid)
-
+	oid, err := primitive.ObjectIDFromHex(userId)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
 		return
 	}
+
+	err = models.DeleteUser(oid)
+	if err != nil {
+		http.Error(w, "Failed to delete user", http.StatusNotFound)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w,"Deleted user",oid,"\n")
+	fmt.Fprintf(w, "Deleted user with ID: %s\n", userId)
 }
