@@ -19,10 +19,10 @@ func init(){
 	db = session.DB("mongo-golang").C("users")
 
 }
-func (u *User)CreateUser() *User{
+func (u *User)CreateUser() error{
 	u.Id = bson.NewObjectId()
-	db.Insert(u)
-	return u
+	err := db.Insert(u)
+	return err
 }
 
 func GetUserById(userId bson.ObjectId) (*User,error){

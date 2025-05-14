@@ -3,7 +3,6 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -71,4 +70,24 @@ func CreateUser(w http.ResponseWriter,r *http.Request){
 	w.WriteHeader(http.StatusOK)
 	w.Write(userJSON)
 
+}
+
+func DeleteUser(w http.ResponseWriter,r *http.Request){
+	var userId string = mux.Vars(r)["userId"]
+
+	if !bson.IsObjectIdHex(userId) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	oid := bson.ObjectIdHex(userId)
+
+	err := models.DeleteUser(oid)
+
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w,"Deleted user",oid,"\n")
 }
